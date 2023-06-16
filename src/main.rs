@@ -3,7 +3,6 @@
 
 use std::io::{self, BufReader, Read};
 use std::fs::File;
-// use byteorder::{BigEndian, ByteOrder, LittleEndian, ReadBytesExt};
 
 const TEST_FILE: &str = "/home/tott/layers/numeric_poly_test_3857.shp";
 

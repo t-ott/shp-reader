@@ -50,11 +50,12 @@ fn main() -> io::Result<()> {
     let f = File::open(TEST_FILE)?;
     let mut input = BufReader::new(f);
 
+    let mut buf = [0; 4];
+
     let mut i: u8 = 0;
 
     // Big Endian header portion
     while i <= 6 {
-        let mut buf = [0; 4];
         input.read_exact(&mut buf)?;
     
         let n = i32::from_be_bytes(buf);
@@ -65,7 +66,6 @@ fn main() -> io::Result<()> {
 
     // Little Endian header portion
     loop {
-        let mut buf = [0; 4];
         input.read_exact(&mut buf)?;
 
         let n = i32::from_le_bytes(buf);

@@ -46,6 +46,18 @@ impl ShapeType {
     }
 }
 
+#[derive(Debug, Default)]
+struct BoundingBox {
+    x_min: f64,
+    y_min: f64,
+    x_max: f64,
+    y_max: f64,
+    z_min: f64,
+    z_max: f64,
+    m_min: f64,
+    m_max: f64
+}
+
 fn main() -> io::Result<()> {
     let f = File::open(TEST_FILE)?;
     let mut input = BufReader::new(f);
@@ -86,16 +98,27 @@ fn main() -> io::Result<()> {
     println!("Shape type: {:?}", shape_type);
     i += 1;
 
-    println!("\nStart bounding box read:");
-    let mut bbox: [f64; 8];
+    let mut bbox = BoundingBox::default();
     let mut buf = [0; 8];
     loop {
         input.read_exact(&mut buf)?;
         let n = f64::from_le_bytes(buf);
-        println!{"{:?}", n};
+
+        match i {
+            9 => bbox.x_min = n,
+            10 => bbox.y_min = n,
+            11 => bbox.x_max = n,
+            12 => bbox.y_max = n,
+            13 => bbox.z_min = n,
+            14 => bbox.z_max = n,
+            15 => bbox.m_min = n,
+            16 => bbox.m_max = n,
+            _ => panic!("Went too far parsing bounding box")
+        }
 
         i += 1;
         if i == 17 {
+            println!("{:?}", bbox);
             break;
         }
     }

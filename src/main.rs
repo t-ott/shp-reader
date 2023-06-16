@@ -24,6 +24,28 @@ enum ShapeType {
     MultiPatch
 }
 
+impl ShapeType {
+    fn from_i32(value: i32) -> ShapeType {
+        match value {
+            0 => ShapeType::NullShape,
+            1 => ShapeType::Point,
+            3 => ShapeType::PolyLine,
+            5 => ShapeType::Polygon,
+            8 => ShapeType::MultiPoint,
+            11 => ShapeType::PointZ,
+            13 => ShapeType::PolyLineZ,
+            15 => ShapeType::PolygonZ,
+            18 => ShapeType::MultiPointZ,
+            21 => ShapeType::PointM,
+            23 => ShapeType::PolyLineM,
+            25 => ShapeType::PolygonM,
+            28 => ShapeType::MultiPointM,
+            31 => ShapeType::MultiPatch,
+            _ => panic!("Unknown value for ShapeType: {}", value)
+        }
+    }
+}
+
 fn main() -> io::Result<()> {
     let f = File::open(TEST_FILE)?;
     let mut input = BufReader::new(f);

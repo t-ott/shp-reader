@@ -7,6 +7,7 @@ use std::fs::File;
 
 const TEST_FILE: &str = "/home/tott/layers/numeric_poly_test_3857.shp";
 
+#[derive(Debug)]
 enum ShapeType {
     NullShape,
     Point,
@@ -54,8 +55,10 @@ fn main() -> io::Result<()> {
 
     let mut i: u8 = 0;
 
-    // Big Endian header portion
-    while i <= 6 {
+    // ***
+    // Start big Endian header portion
+
+    while i <= 5 {
         input.read_exact(&mut buf)?;
     
         let n = i32::from_be_bytes(buf);
@@ -63,16 +66,37 @@ fn main() -> io::Result<()> {
 
         i += 1;
     }
+    input.read_exact(&mut buf)?;
+    let file_length = i32::from_be_bytes(buf);
+    println!("File length: {}", file_length);
+    i += 1;
 
-    // Little Endian header portion
+    // End big Endian header portion
+    // ***
+
+    // ***
+    // Start little endian header portion
+
+    input.read_exact(&mut buf)?;
+    let version = i32::from_le_bytes(buf);
+    println!("Version: {}", version);
+    i += 1;
+
+    input.read_exact(&mut buf)?;
+    let shape_type: ShapeType = ShapeType::from_i32(i32::from_le_bytes(buf));
+    println!("Shape type: {:?}", shape_type);
+    i += 1;
+
+    println!("\nStart bounding box read:");
+    let mut bbox: [f64; 8];
+    let mut buf = [0; 8];
     loop {
         input.read_exact(&mut buf)?;
-
-        let n = i32::from_le_bytes(buf);
+        let n = f64::from_le_bytes(buf);
         println!{"{:?}", n};
 
         i += 1;
-        if i == 16 {
+        if i == 17 {
             break;
         }
     }

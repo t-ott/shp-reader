@@ -58,7 +58,7 @@ struct BoundingBox {
     m_max: f64
 }
 
-#[derive(Default)]
+#[derive(Debug, Default)]
 struct ShpHeader {
     file_code: i32,
     file_length: i32,
@@ -72,66 +72,64 @@ fn main() -> io::Result<()> {
     let mut input = BufReader::new(f);
 
     let mut header: ShpHeader = ShpHeader::default();
-    let mut buf = [0; 4];
-
-    let mut i: u8 = 0;
 
     // ***
     // Start big Endian header portion
-
-    while i <= 5 {
-        input.read_exact(&mut buf)?;
+    // reading Integer (i32)
     
+    let mut buf = [0; 4];
+    for i in 0..7 {
+        input.read_exact(&mut buf)?;
         let n = i32::from_be_bytes(buf);
-        println!("{:?}", n);
 
-        i += 1;
+        match i {
+            0 => header.file_code = n,
+            6 => header.file_length = n,
+            _ => continue
+        }
     }
-    input.read_exact(&mut buf)?;
-    let file_length = i32::from_be_bytes(buf);
-    println!("File length: {}", file_length);
-    i += 1;
+    println!("{:?}", header);
 
     // End big Endian header portion
     // ***
 
     // ***
     // Start little endian header portion
+    for i in 0..2 {
+        input.read_exact(&mut buf)?;
+        let n = i32::from_le_bytes(buf);
 
-    input.read_exact(&mut buf)?;
-    let version = i32::from_le_bytes(buf);
-    println!("Version: {}", version);
-    i += 1;
+        match i {
+            0 => header.version = n,
+            1 => header.shape_type = ShapeType::from_i32(n),
+            _ => break
+        }
+    }
+    println!("{:?}", header);
 
-    input.read_exact(&mut buf)?;
-    let shape_type: ShapeType = ShapeType::from_i32(i32::from_le_bytes(buf));
-    println!("Shape type: {:?}", shape_type);
-    i += 1;
-
-    let mut bbox = BoundingBox::default();
+    // switch to Double (f64)
     let mut buf = [0; 8];
-    loop {
+    let mut bbox = BoundingBox::default();
+
+    for i in 0..8 {
         input.read_exact(&mut buf)?;
         let n = f64::from_le_bytes(buf);
 
         match i {
-            9 => bbox.x_min = n,
-            10 => bbox.y_min = n,
-            11 => bbox.x_max = n,
-            12 => bbox.y_max = n,
-            13 => bbox.z_min = n,
-            14 => bbox.z_max = n,
-            15 => bbox.m_min = n,
-            16 => bbox.m_max = n,
+            0 => bbox.x_min = n,
+            1 => bbox.y_min = n,
+            2 => bbox.x_max = n,
+            3 => bbox.y_max = n,
+            4 => bbox.z_min = n,
+            5 => bbox.z_max = n,
+            6 => bbox.m_min = n,
+            7 => bbox.m_max = n,
             _ => panic!("Went too far parsing bounding box")
         }
-
-        i += 1;
-        if i == 17 {
-            println!("{:?}", bbox);
-            break;
-        }
     }
+    header.bounding_box = bbox;
+
+    println!("{:?}", header);
 
     Ok(())
 }

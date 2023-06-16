@@ -6,9 +6,9 @@ use std::fs::File;
 
 const TEST_FILE: &str = "/home/tott/layers/numeric_poly_test_3857.shp";
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 enum ShapeType {
-    NullShape,
+    #[default] NullShape,
     Point,
     PolyLine,
     Polygon,
@@ -58,10 +58,20 @@ struct BoundingBox {
     m_max: f64
 }
 
+#[derive(Default)]
+struct ShpHeader {
+    file_code: i32,
+    file_length: i32,
+    version: i32,
+    shape_type: ShapeType,
+    bounding_box: BoundingBox
+}
+
 fn main() -> io::Result<()> {
     let f = File::open(TEST_FILE)?;
     let mut input = BufReader::new(f);
 
+    let mut header: ShpHeader = ShpHeader::default();
     let mut buf = [0; 4];
 
     let mut i: u8 = 0;

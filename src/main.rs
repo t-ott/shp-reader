@@ -71,8 +71,15 @@ struct ShpHeader {
 
 fn main() -> io::Result<()> {
     let f = File::open(TEST_FILE)?;
-    let mut reader = BufReader::new(f);
+    let reader = BufReader::new(f);
 
+    let header = read_header(reader).expect("Failure reading .shp header");
+    println!("{:?}", header);
+
+    Ok(())
+}
+
+fn read_header(mut reader: BufReader<File>) -> Result<ShpHeader, std::io::Error> {
     // Start big Endian header portion
     let file_code = reader.read_i32::<BigEndian>()?;
     reader.seek(SeekFrom::Start(24))?;
@@ -108,7 +115,5 @@ fn main() -> io::Result<()> {
         }
     };
 
-    println!("{:?}", header);
-
-    Ok(())
+    return Ok(header);
 }

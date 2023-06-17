@@ -1,8 +1,10 @@
 // Esri Shapefile Specification:
 // https://www.esri.com/content/dam/esrisites/sitecore-archive/Files/Pdfs/library/whitepapers/pdfs/shapefile.pdf
 
-use std::io::{self, BufReader, Read};
+use std::io::{self, BufReader, Seek, SeekFrom};
 use std::fs::File;
+
+use byteorder::{LittleEndian, BigEndian, ReadBytesExt};
 
 const TEST_FILE: &str = "/home/tott/layers/numeric_poly_test_3857.shp";
 
@@ -69,65 +71,42 @@ struct ShpHeader {
 
 fn main() -> io::Result<()> {
     let f = File::open(TEST_FILE)?;
-    let mut input = BufReader::new(f);
+    let mut reader = BufReader::new(f);
 
-    let mut header: ShpHeader = ShpHeader::default();
-
-    // ***
     // Start big Endian header portion
-    // reading Integer (i32)
-    
-    let mut buf = [0; 4];
-    for i in 0..7 {
-        input.read_exact(&mut buf)?;
-        let n = i32::from_be_bytes(buf);
+    let file_code = reader.read_i32::<BigEndian>()?;
+    reader.seek(SeekFrom::Start(24))?;
+    let file_length = reader.read_i32::<BigEndian>()?;
 
-        match i {
-            0 => header.file_code = n,
-            6 => header.file_length = n,
-            _ => continue
-        }
-    }
-    println!("{:?}", header);
-
-    // End big Endian header portion
-    // ***
-
-    // ***
     // Start little endian header portion
-    for i in 0..2 {
-        input.read_exact(&mut buf)?;
-        let n = i32::from_le_bytes(buf);
+    let version = reader.read_i32::<LittleEndian>()?;
+    let shape_type = ShapeType::from_i32(reader.read_i32::<LittleEndian>()?);
 
-        match i {
-            0 => header.version = n,
-            1 => header.shape_type = ShapeType::from_i32(n),
-            _ => break
+    let x_min = reader.read_f64::<LittleEndian>()?;
+    let y_min = reader.read_f64::<LittleEndian>()?;
+    let x_max = reader.read_f64::<LittleEndian>()?;
+    let y_max = reader.read_f64::<LittleEndian>()?;
+    let z_min = reader.read_f64::<LittleEndian>()?;
+    let z_max = reader.read_f64::<LittleEndian>()?;
+    let m_min = reader.read_f64::<LittleEndian>()?;
+    let m_max = reader.read_f64::<LittleEndian>()?;
+
+    let header = ShpHeader {
+        file_code: file_code,
+        file_length: file_length,
+        version: version,
+        shape_type: shape_type,
+        bounding_box: BoundingBox {
+             x_min: x_min,
+             y_min: y_min,
+             x_max: x_max,
+             y_max: y_max,
+             z_min: z_min,
+             z_max: z_max,
+             m_min: m_min,
+             m_max: m_max 
         }
-    }
-    println!("{:?}", header);
-
-    // switch to Double (f64)
-    let mut buf = [0; 8];
-    let mut bbox = BoundingBox::default();
-
-    for i in 0..8 {
-        input.read_exact(&mut buf)?;
-        let n = f64::from_le_bytes(buf);
-
-        match i {
-            0 => bbox.x_min = n,
-            1 => bbox.y_min = n,
-            2 => bbox.x_max = n,
-            3 => bbox.y_max = n,
-            4 => bbox.z_min = n,
-            5 => bbox.z_max = n,
-            6 => bbox.m_min = n,
-            7 => bbox.m_max = n,
-            _ => panic!("Went too far parsing bounding box")
-        }
-    }
-    header.bounding_box = bbox;
+    };
 
     println!("{:?}", header);
 

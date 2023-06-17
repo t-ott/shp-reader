@@ -61,6 +61,7 @@ struct BoundingBox {
     m_max: f64,
 }
 
+#[derive(Debug)]
 struct BoundingBoxSimple {
     x_min: f64,
     y_min: f64,
@@ -68,8 +69,8 @@ struct BoundingBoxSimple {
     y_max: f64,
 }
 
-#[derive(Debug, Default)]
-struct ShpHeader {
+#[derive(Debug)]
+struct Header {
     file_code: i32,
     file_length: i32,
     version: i32,
@@ -77,12 +78,13 @@ struct ShpHeader {
     bounding_box: BoundingBox,
 }
 
-#[derive(Default)]
+#[derive(Debug)]
 struct Point {
     x: f64,
     y: f64,
 }
 
+#[derive(Debug)]
 struct PolyLine {
     bounding_box: BoundingBoxSimple,
     num_parts: i32,
@@ -91,6 +93,7 @@ struct PolyLine {
     points: Vec<Point>,
 }
 
+#[derive(Debug)]
 struct Polygon {
     bounding_box: BoundingBoxSimple,
     num_parts: i32,
@@ -99,36 +102,44 @@ struct Polygon {
     points: Vec<Point>,
 }
 
-enum ShpRecordGeom {
+#[derive(Debug)]
+enum RecordGeom {
     Point(Point),
     PolyLine(PolyLine),
     Polygon(Polygon),
 }
 
-#[derive(Default)]
-struct ShpRecordContent {
+#[derive(Debug, Default)]
+struct RecordContent {
     shape_type: ShapeType,
-    shape_record_geom: Option<ShpRecordGeom>,
+    record_geom: Option<RecordGeom>,
 }
 
-#[derive(Default)]
-struct ShpRecord {
+#[derive(Debug, Default)]
+struct Record {
     record_number: i32,
     content_length: i32,
-    record_content: ShpRecordContent,
+    record_content: RecordContent,
 }
 
 fn main() -> io::Result<()> {
     let f = File::open(TEST_FILE)?;
-    let reader = BufReader::new(f);
+    let mut reader = BufReader::new(f);
 
-    let header = read_header(reader).expect("Failure reading .shp header");
-    println!("{:?}", header);
+    let header = read_header(&mut reader).expect("Failed to read .shp header");
+    println!("Header:\n{:?}\n", header);
+
+    // TODO: loop specified number of times based on value in header.file_length?
+    // Or maybe just while buffer can be filled, then break
+    for _ in 0..3 {
+        let record = read_record(&mut reader).expect("Failed to read .shp record");
+        println!("Record:\n{:?}\n", record)
+    }
 
     Ok(())
 }
 
-fn read_header(mut reader: BufReader<File>) -> Result<ShpHeader, std::io::Error> {
+fn read_header(reader: &mut BufReader<File>) -> Result<Header, std::io::Error> {
     // Start big endian header portion
     let file_code = reader.read_i32::<BigEndian>()?;
     // Skip over empty bytes
@@ -148,7 +159,7 @@ fn read_header(mut reader: BufReader<File>) -> Result<ShpHeader, std::io::Error>
     let m_min = reader.read_f64::<LittleEndian>()?;
     let m_max = reader.read_f64::<LittleEndian>()?;
 
-    let header = ShpHeader {
+    let header = Header {
         file_code: file_code,
         file_length: file_length,
         version: version,
@@ -165,9 +176,33 @@ fn read_header(mut reader: BufReader<File>) -> Result<ShpHeader, std::io::Error>
         },
     };
 
-    return Ok(header);
+    Ok(header)
 }
 
-fn read_record(mut reader: BufReader<File>) -> Result<ShpRecord, std::io::Error> {
-    return Ok(ShpRecord::default());
+fn read_record(reader: &mut BufReader<File>) -> Result<Record, std::io::Error> {
+    let record_number = reader.read_i32::<BigEndian>()?;
+    let content_length = reader.read_i32::<BigEndian>()?;
+    let record_content = read_record_content(reader)?;
+
+    Ok(Record{record_number, content_length, record_content})
+}
+
+fn read_record_content(reader: &mut BufReader<File>) -> Result<RecordContent, std::io::Error> {
+    let shape_type = ShapeType::from_i32(reader.read_i32::<LittleEndian>()?);
+    let record_geom: Option<RecordGeom> = match shape_type {
+        ShapeType::NullShape => None,
+        ShapeType::Point => Some(RecordGeom::Point(
+            read_point_geom(reader).expect("Failure reading Point record geom")
+        )),
+        _ => panic!("Haven't written that yet!")
+    };
+
+    Ok(RecordContent{shape_type, record_geom})
+}
+
+fn read_point_geom(reader: &mut BufReader<File>) -> Result<Point, std::io::Error> {
+    let x = reader.read_f64::<LittleEndian>()?;
+    let y = reader.read_f64::<LittleEndian>()?;
+
+    Ok(Point{x, y})
 }

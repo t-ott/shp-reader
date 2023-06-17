@@ -1,16 +1,17 @@
 // Esri Shapefile Specification:
 // https://www.esri.com/content/dam/esrisites/sitecore-archive/Files/Pdfs/library/whitepapers/pdfs/shapefile.pdf
 
-use std::io::{self, BufReader, Seek, SeekFrom};
 use std::fs::File;
+use std::io::{self, BufReader, Seek, SeekFrom};
 
-use byteorder::{LittleEndian, BigEndian, ReadBytesExt};
+use byteorder::{BigEndian, LittleEndian, ReadBytesExt};
 
 const TEST_FILE: &str = "/home/tott/layers/numeric_poly_test_3857.shp";
 
 #[derive(Debug, Default)]
 enum ShapeType {
-    #[default] NullShape,
+    #[default]
+    NullShape,
     Point,
     PolyLine,
     Polygon,
@@ -23,7 +24,7 @@ enum ShapeType {
     PolyLineM,
     PolygonM,
     MultiPointM,
-    MultiPatch
+    MultiPatch,
 }
 
 impl ShapeType {
@@ -43,7 +44,7 @@ impl ShapeType {
             25 => ShapeType::PolygonM,
             28 => ShapeType::MultiPointM,
             31 => ShapeType::MultiPatch,
-            _ => panic!("Unknown value for ShapeType: {}", value)
+            _ => panic!("Unknown value for ShapeType: {}", value),
         }
     }
 }
@@ -57,7 +58,7 @@ struct BoundingBox {
     z_min: f64,
     z_max: f64,
     m_min: f64,
-    m_max: f64
+    m_max: f64,
 }
 
 #[derive(Debug, Default)]
@@ -66,7 +67,20 @@ struct ShpHeader {
     file_length: i32,
     version: i32,
     shape_type: ShapeType,
-    bounding_box: BoundingBox
+    bounding_box: BoundingBox,
+}
+
+#[derive(Default)]
+struct ShpRecordContent {
+    shape_type: ShapeType,
+    data: i32,
+}
+
+#[derive(Default)]
+struct ShpRecord {
+    record_number: i32,
+    content_length: i32,
+    record_content: ShpRecordContent,
 }
 
 fn main() -> io::Result<()> {
@@ -104,16 +118,20 @@ fn read_header(mut reader: BufReader<File>) -> Result<ShpHeader, std::io::Error>
         version: version,
         shape_type: shape_type,
         bounding_box: BoundingBox {
-             x_min: x_min,
-             y_min: y_min,
-             x_max: x_max,
-             y_max: y_max,
-             z_min: z_min,
-             z_max: z_max,
-             m_min: m_min,
-             m_max: m_max 
-        }
+            x_min: x_min,
+            y_min: y_min,
+            x_max: x_max,
+            y_max: y_max,
+            z_min: z_min,
+            z_max: z_max,
+            m_min: m_min,
+            m_max: m_max,
+        },
     };
 
     return Ok(header);
+}
+
+fn read_record(mut reader: BufReader<File>) -> Result<ShpRecord, std::io::Error> {
+    return Ok(ShpRecord::default());
 }

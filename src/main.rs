@@ -6,7 +6,7 @@ use std::io::{self, BufReader, Seek, SeekFrom};
 
 use byteorder::{BigEndian, LittleEndian, ReadBytesExt};
 
-const TEST_FILE: &str = "/home/tott/layers/numeric_poly_test_3857.shp";
+const TEST_FILE: &str = "/home/tott/layers/numeric_pt_test_3857.shp";
 
 #[derive(Debug, Default)]
 enum ShapeType {
@@ -61,6 +61,13 @@ struct BoundingBox {
     m_max: f64,
 }
 
+struct BoundingBoxSimple {
+    x_min: f64,
+    y_min: f64,
+    x_max: f64,
+    y_max: f64,
+}
+
 #[derive(Debug, Default)]
 struct ShpHeader {
     file_code: i32,
@@ -71,9 +78,37 @@ struct ShpHeader {
 }
 
 #[derive(Default)]
+struct Point {
+    x: f64,
+    y: f64,
+}
+
+struct PolyLine {
+    bounding_box: BoundingBoxSimple,
+    num_parts: i32,
+    num_points: i32,
+    parts: Vec<i32>,
+    points: Vec<Point>,
+}
+
+struct Polygon {
+    bounding_box: BoundingBoxSimple,
+    num_parts: i32,
+    num_points: i32,
+    parts: Vec<i32>,
+    points: Vec<Point>,
+}
+
+enum ShpRecordGeom {
+    Point(Point),
+    PolyLine(PolyLine),
+    Polygon(Polygon),
+}
+
+#[derive(Default)]
 struct ShpRecordContent {
     shape_type: ShapeType,
-    data: i32,
+    shape_record_geom: Option<ShpRecordGeom>,
 }
 
 #[derive(Default)]
@@ -94,15 +129,16 @@ fn main() -> io::Result<()> {
 }
 
 fn read_header(mut reader: BufReader<File>) -> Result<ShpHeader, std::io::Error> {
-    // Start big Endian header portion
+    // Start big endian header portion
     let file_code = reader.read_i32::<BigEndian>()?;
+    // Skip over empty bytes
     reader.seek(SeekFrom::Start(24))?;
     let file_length = reader.read_i32::<BigEndian>()?;
 
     // Start little endian header portion
     let version = reader.read_i32::<LittleEndian>()?;
     let shape_type = ShapeType::from_i32(reader.read_i32::<LittleEndian>()?);
-
+    // Read bbox coordinates (Double)
     let x_min = reader.read_f64::<LittleEndian>()?;
     let y_min = reader.read_f64::<LittleEndian>()?;
     let x_max = reader.read_f64::<LittleEndian>()?;

@@ -102,6 +102,7 @@ struct Polygon {
     points: Vec<Point>,
 }
 
+// TODO: Clean this up? Is it weird to have Some(Point(Point))?
 #[derive(Debug)]
 enum RecordGeom {
     Point(Point),
@@ -184,7 +185,11 @@ fn read_record(reader: &mut BufReader<File>) -> Result<Record, std::io::Error> {
     let content_length = reader.read_i32::<BigEndian>()?;
     let record_content = read_record_content(reader)?;
 
-    Ok(Record{record_number, content_length, record_content})
+    Ok(Record {
+        record_number,
+        content_length,
+        record_content,
+    })
 }
 
 fn read_record_content(reader: &mut BufReader<File>) -> Result<RecordContent, std::io::Error> {
@@ -192,17 +197,20 @@ fn read_record_content(reader: &mut BufReader<File>) -> Result<RecordContent, st
     let record_geom: Option<RecordGeom> = match shape_type {
         ShapeType::NullShape => None,
         ShapeType::Point => Some(RecordGeom::Point(
-            read_point_geom(reader).expect("Failure reading Point record geom")
+            read_point_geom(reader).expect("Failure reading Point record geom"),
         )),
-        _ => panic!("Haven't written that yet!")
+        _ => panic!("Haven't written that yet!"),
     };
 
-    Ok(RecordContent{shape_type, record_geom})
+    Ok(RecordContent {
+        shape_type,
+        record_geom,
+    })
 }
 
 fn read_point_geom(reader: &mut BufReader<File>) -> Result<Point, std::io::Error> {
     let x = reader.read_f64::<LittleEndian>()?;
     let y = reader.read_f64::<LittleEndian>()?;
 
-    Ok(Point{x, y})
+    Ok(Point { x, y })
 }

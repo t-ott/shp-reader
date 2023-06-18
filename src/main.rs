@@ -214,3 +214,11 @@ fn read_point_geom(reader: &mut BufReader<File>) -> Result<Point, std::io::Error
 
     Ok(Point { x, y })
 }
+
+fn read_polyline_geom(reader: &mut BufReader<File>) -> Result<PolyLine, std::io::Error> {
+    unimplemented!();
+}
+
+fn read_polygon_geom(reader: &mut BufReader<File>) -> Result<Polygon, std::io::Error> {
+    unimplemented!();
+}
